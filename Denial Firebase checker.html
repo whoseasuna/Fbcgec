@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Denial Firebase Checker — Simulation</title>
+<style>
+  :root{
+    --bg:#080808; --panel:#111; --panel2:#0d0d0d;
+    --border:#1f1f1f; --border2:#2a2a2a;
+    --text:#e8e8e8; --muted:#666; --dim:#444; --dimmer:#2a2a2a;
+    --red:#ef4444; --orange:#f97316; --green:#22c55e; --cyan:#6acfff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(ellipse at 60% 0%, hsl(0 60% 12% / .5) 0%, transparent 60%),
+      radial-gradient(ellipse at 0% 100%, hsl(220 30% 8%) 0%, hsl(220 25% 5%) 100%);
+    min-height:100vh; color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  code, .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,textarea{font-family:inherit}
+
+  /* ---------- GATE ---------- */
+  #gate{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .gate-card{
+    width:100%; max-width:380px;
+    background:rgba(17,17,17,.92); backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.07); border-radius:24px;
+    padding:36px 28px; text-align:center;
+    box-shadow:0 25px 60px rgba(0,0,0,.7);
+  }
+  .gate-icon{
+    width:64px; height:64px; margin:0 auto 20px;
+    border-radius:18px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#dc2626,#c2410c);
+    box-shadow:0 10px 30px rgba(220,38,38,.35);
+    font-size:28px;
+  }
+  .gate-card h1{
+    font-size:20px; font-weight:800; letter-spacing:-.02em; line-height:1.2;
+  }
+  .gate-card h1 .a{color:var(--cyan)}
+  .gate-card .sub{font-size:12px; color:var(--muted); margin-top:6px; letter-spacing:.08em; text-transform:uppercase}
+  #pw{
+    width:100%; margin-top:24px; padding:14px 16px;
+    background:#0a0a0a; border:1px solid var(--border2); border-radius:12px;
+    color:#fff; font-size:14px; outline:none; letter-spacing:.15em;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  #pw:focus{border-color:rgba(239,68,68,.5); box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+  #unlock{
+    width:100%; margin-top:14px; padding:13px;
+    background:linear-gradient(135deg,#dc2626,#f97316); color:#fff;
+    border-radius:12px; font-weight:700; font-size:14px;
+    box-shadow:0 8px 24px rgba(220,38,38,.3); transition:opacity .15s;
+  }
+  #unlock:hover{opacity:.9}
+  .err{color:#f87171; font-size:12px; margin-top:12px; min-height:16px}
+  .shake{animation:shake .35s}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)}
+    60%{transform:translateX(-5px)}
+    80%{transform:translateX(5px)}
+  }
+
+  /* ---------- APP ---------- */
+  #app{display:none; min-height:100vh; flex-direction:column}
+  #app.show{display:flex}
+
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(10,10,10,.94); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .hdr-in{
+    max-width:1100px; margin:0 auto; padding:14px 22px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .logo{
+    width:32px;height:32px;border-radius:9px;flex-shrink:0;
+    background:linear-gradient(135deg,#dc2626,#f97316);
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+    box-shadow:0 6px 16px rgba(220,38,38,.4);
+  }
+  .hdr-title{font-size:15px; font-weight:800; letter-spacing:-.01em}
+  .hdr-title .a{color:var(--cyan)}
+  .sim-badge{
+    font-size:10px; font-weight:800; letter-spacing:.1em;
+    padding:4px 9px; border-radius:999px;
+    background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.3);
+    color:#fb923c;
+  }
+  .hdr-spacer{flex:1}
+  #lock{
+    font-size:12px; padding:8px 14px; border-radius:10px;
+    background:#111; border:1px solid var(--border2); color:var(--muted);
+    transition:.15s;
+  }
+  #lock:hover{color:#f87171; border-color:rgba(239,68,68,.4)}
+
+  main{max-width:1100px; margin:0 auto; width:100%; padding:26px 22px 80px; flex:1}
+
+  .notice{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:12px 16px; border-radius:14px; margin-bottom:22px;
+    background:rgba(249,115,22,.07); border:1px solid rgba(249,115,22,.2);
+    font-size:12px; line-height:1.55; color:#fdba74;
+  }
+  .notice b{color:#fb923c}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:18px; padding:20px;
+  }
+  .panel label{
+    display:block; font-size:10px; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:10px;
+  }
+  #urls{
+    width:100%; min-height:140px; resize:vertical;
+    padding:14px 16px; border-radius:12px;
+    background:#0a0a0a; border:1px solid var(--border2);
+    color:#d4d4d4; font-size:13px; line-height:1.7; outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  #urls::placeholder{color:#333}
+  #urls:focus{border-color:rgba(239,68,68,.45); box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+  .row{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
+  #start{
+    padding:12px 22px; border-radius:12px; font-weight:700; font-size:13px;
+    background:linear-gradient(135deg,#dc2626,#f97316); color:#fff;
+    box-shadow:0 8px 22px rgba(220,38,38,.3); transition:opacity .15s;
+  }
+  #start:hover:not(:disabled){opacity:.9}
+  #start:disabled{opacity:.45; cursor:not-allowed}
+  .ghost{
+    padding:12px 18px; border-radius:12px; font-size:13px; font-weight:600;
+    background:#0f0f0f; border:1px solid var(--border2); color:var(--muted);
+    transition:.15s;
+  }
+  .ghost:hover{color:#aaa; border-color:#333}
+
+  /* ---------- STATS BAR ---------- */
+  #statsBar{
+    display:none; align-items:center; gap:22px; flex-wrap:wrap;
+    margin-top:18px; padding:14px 20px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:14px;
+  }
+  #statsBar.show{display:flex}
+  .stat{display:flex; flex-direction:column; gap:2px}
+  .stat .k{font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); font-weight:700}
+  .stat .v{font-size:18px; font-weight:900; line-height:1}
+  .v.t{color:#e8e8e8} .v.g{color:var(--green)} .v.r{color:#f87171}
+
+  /* ---------- PROGRESS ---------- */
+  #progressWrap{display:none; margin-top:16px}
+  #progressWrap.show{display:block}
+  .prog-meta{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-bottom:7px}
+  .prog-track{height:3px; background:#151515; border-radius:999px; overflow:hidden}
+  .prog-fill{height:100%; width:0%; background:linear-gradient(90deg,#dc2626,#f97316); transition:width .3s ease}
+
+  /* ---------- RESULTS ---------- */
+  #results{display:flex; flex-direction:column; gap:14px; margin-top:22px}
+  .rc{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden;
+    animation:slideUp .35s cubic-bezier(.2,.9,.3,1) both;
+  }
+  @keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .rc.ok{border-left:3px solid var(--green)}
+  .rc.dead{border-left:3px solid #7f1d1d; opacity:.75}
+
+  .rc-head{
+    display:flex; align-items:center; gap:9px;
+    padding:11px 16px; background:#0c0c0c;
+    border-bottom:1px solid var(--border);
+  }
+  .dot{width:8px; height:8px; border-radius:50%; flex-shrink:0}
+  .rc.ok .dot{background:var(--green); box-shadow:0 0 8px rgba(34,197,94,.8)}
+  .rc.dead .dot{background:#7f1d1d}
+  .rc-status{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase}
+  .rc.ok .rc-status{color:var(--green)}
+  .rc.dead .rc-status{color:#b91c1c}
+  .rc-code{font-size:10px; color:var(--dim); font-family:ui-monospace,monospace}
+  .rc-copy{
+    margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.06em;
+    padding:5px 11px; border-radius:8px;
+    background:rgba(255,255,255,.04); border:1px solid var(--border2);
+    color:var(--muted); transition:.15s;
+  }
+  .rc-copy:hover{color:#fff; background:rgba(255,255,255,.09)}
+  .rc-copy.done{color:var(--green); border-color:rgba(34,197,94,.4)}
+
+  .rc-body{padding:16px 16px 18px}
+  .rc-line{
+    font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:7px;
+  }
+  .rc-url{
+    display:block; font-size:12.5px; color:#7dd3fc; word-break:break-all;
+    background:#0a0a0a; border:1px solid #141414; border-radius:9px;
+    padding:9px 12px;
+  }
+  .rc-summary{margin-top:16px; display:flex; flex-direction:column; gap:6px}
+  .rc-summary .line{font-size:13px; color:#b5b5b5; font-variant-numeric:tabular-nums}
+  .rc-summary .line b{color:#fff; font-weight:800; font-size:14px; margin-left:4px}
+  .rc-summary .line.on b{color:var(--green)}
+  .rc-summary .line.off b{color:#9ca3af}
+
+  /* ---------- COPY ALL ---------- */
+  #copyRow{display:none; margin-top:22px}
+  #copyRow.show{display:flex; justify-content:center}
+  #copyAll{
+    padding:14px 32px; border-radius:14px; font-weight:800; font-size:13px;
+    background:#111; border:1px solid var(--border2); color:#e8e8e8;
+    transition:.15s; letter-spacing:.03em;
+  }
+  #copyAll:hover{background:#161616; border-color:#3a3a3a}
+  #copyAll.done{background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.45); color:#4ade80}
+
+  /* ---------- TOAST ---------- */
+  #toast{
+    position:fixed; bottom:26px; left:50%; transform:translate(-50%,20px);
+    background:#1a1a1a; border:1px solid var(--border2);
+    padding:12px 22px; border-radius:12px; font-size:13px; font-weight:600;
+    opacity:0; pointer-events:none; transition:.25s; z-index:100;
+    box-shadow:0 12px 30px rgba(0,0,0,.6);
+  }
+  #toast.show{opacity:1; transform:translate(-50%,0)}
+
+  @media (max-width:600px){
+    .hdr-in{padding:12px 14px; gap:10px}
+    .hdr-title{font-size:13px}
+    .sim-badge{display:none}
+    main{padding:18px 14px 60px}
+    .panel{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PASSWORD GATE ================= -->
+<div id="gate">
+  <div class="gate-card" id="gateCard">
+    <div class="gate-icon">🛡️</div>
+    <h1>DENIAL <span class="a">FIREBASE</span> CHECKER</h1>
+    <p class="sub">Restricted Access</p>
+    <input id="pw" type="password" placeholder="Enter password" autocomplete="off">
+    <button id="unlock">Unlock Console</button>
+    <p class="err" id="err"></p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header>
+    <div class="hdr-in">
+      <div class="logo">🔥</div>
+      <span class="hdr-title">Denial <span class="a">Firebase</span> Checker</span>
+      <span class="sim-badge">SIMULATION</span>
+      <span class="hdr-spacer"></span>
+      <button id="lock">Lock</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice">
+      <span>⚠️</span>
+      <div>
+        <b>Simulation mode.</b> No network requests are made. Every result below is generated
+        locally from the URL string so you can preview the interface. Nothing is sent anywhere.
+      </div>
+    </div>
+
+    <section class="panel">
+      <label>Firebase URLs — one per line</label>
+      <textarea id="urls" spellcheck="false" placeholder="https://project-alpha.firebaseio.com
+https://project-beta.firebaseio.com
+https://project-gamma.firebasedatabase.app"></textarea>
+      <div class="row">
+        <button id="start">▶ Start Check</button>
+        <button id="sample" class="ghost">Load sample</button>
+        <button id="clear" class="ghost">Clear</button>
+      </div>
+    </section>
+
+    <div id="statsBar">
+      <div class="stat"><span class="k">Checked</span><span class="v t" id="statChecked">0</span></div>
+      <div class="stat"><span class="k">Working</span><span class="v g" id="statWorking">0</span></div>
+      <div class="stat"><span class="k">Dead</span><span class="v r" id="statDead">0</span></div>
+    </div>
+
+    <div id="progressWrap">
+      <div class="prog-meta">
+        <span id="progLabel">Initialising…</span>
+        <span id="progPct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <section id="results"></section>
+
+    <div id="copyRow">
+      <button id="copyAll">📋 Copy All Results</button>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============================================================
+     AUTH GATE
+     ============================================================ */
+  var PASSWORD = 'HarshuXjay';
+  var SESSION_KEY = 'dfc_unlocked';
+
+  var gate      = document.getElementById('gate');
+  var app       = document.getElementById('app');
+  var gateCard  = document.getElementById('gateCard');
+  var pwInput   = document.getElementById('pw');
+  var errEl     = document.getElementById('err');
+
+  function unlock(){
+    gate.style.display = 'none';
+    app.classList.add('show');
+    sessionStorage.setItem(SESSION_KEY,'1');
+  }
+
+  document.getElementById('unlock').addEventListener('click', function(){
+    if(pwInput.value === PASSWORD){
+      unlock();
+    } else {
+      errEl.textContent = 'Incorrect password.';
+      gateCard.classList.remove('shake');
+      void gateCard.offsetWidth;
+      gateCard.classList.add('shake');
+      pwInput.value = '';
+      pwInput.focus();
+    }
+  });
+
+  pwInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') document.getElementById('unlock').click();
+  });
+
+  document.getElementById('lock').addEventListener('click', function(){
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  });
+
+  if(sessionStorage.getItem(SESSION_KEY) === '1') unlock();
+  else setTimeout(function(){ pwInput.focus(); }, 100);
+
+  /* ============================================================
+     SIMULATION CORE
+     ============================================================ */
+
+  // Deterministic 32-bit hash so the same URL always yields the
+  // same fake numbers — makes the demo feel consistent.
+  function hash32(str){
+    var h = 2166136261;
+    for(var i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function normaliseUrl(raw){
+    var t = String(raw || '').trim();
+    if(!t) return '';
+    t = t.replace(/\/+$/,'');
+    if(!/^https?:\/\//i.test(t)) t = 'https://' + t;
+    return t;
+  }
+
+  // Fake probe: ~65% of URLs "work", the rest return an error code.
+  function simulate(url){
+    var h = hash32(url);
+    var works = (h % 100) < 65;
+
+    if(!works){
+      var codes = [401, 403, 404];
+      return { url: url, working: false, code: codes[h % codes.length] };
+    }
+
+    var total   = 3 + (Math.floor(h / 16) % 38);      // 3 … 40
+    var online  = Math.floor(h / 8192) % (total + 1); // 0 … total
+    var offline = total - online;
+
+    return { url: url, working: true, total: total, online: online, offline: offline };
+  }
+
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  /* ============================================================
+     DOM WIRING
+     ============================================================ */
+  var urlsEl     = document.getElementById('urls');
+  var startBtn   = document.getElementById('start');
+  var sampleBtn  = document.getElementById('sample');
+  var clearBtn   = document.getElementById('clear');
+  var resultsEl  = document.getElementById('results');
+  var copyRow    = document.getElementById('copyRow');
+  var copyAllBtn = document.getElementById('copyAll');
+  var statsBar   = document.getElementById('statsBar');
+  var progWrap   = document.getElementById('progressWrap');
+  var progFill   = document.getElementById('progFill');
+  var progLabel  = document.getElementById('progLabel');
+  var progPct    = document.getElementById('progPct');
+  var toastEl    = document.getElementById('toast');
+
+  var statChecked = document.getElementById('statChecked');
+  var statWorking = document.getElementById('statWorking');
+  var statDead    = document.getElementById('statDead');
+
+  var running   = false;
+  var collected = [];   // array of result objects
+
+  /* ---------- toast ---------- */
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 2200);
+  }
+
+  /* ---------- clipboard helper (works on file:// too) ---------- */
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve, reject){
+      try{
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        resolve();
+      }catch(e){ reject(e); }
+    });
+  }
+
+  /* ---------- plain-text block for one result ---------- */
+  function resultToText(r){
+    if(!r.working){
+      return '❌ ' + r.url + '\nStatus: HTTP ' + r.code + ' (unreachable)\n';
+    }
+    return [
+      '🔗 Firebase URL',
+      r.url,
+      '',
+      '📊 Device Summary',
+      '• Total: ' + r.total,
+      '• 🟢 Online: ' + r.online,
+      '• ⚫ Offline: ' + r.offline
+    ].join('\n');
+  }
+
+  /* ---------- build result card ---------- */
+  function buildCard(r){
+    var card = document.createElement('div');
+    card.className = 'rc ' + (r.working ? 'ok' : 'dead');
+
+    var head = document.createElement('div');
+    head.className = 'rc-head';
+
+    var dot = document.createElement('span');
+    dot.className = 'dot';
+
+    var status = document.createElement('span');
+    status.className = 'rc-status';
+    status.textContent = r.working ? 'Working' : 'Dead';
+
+    head.appendChild(dot);
+    head.appendChild(status);
+
+    if(!r.working){
+      var code = document.createElement('span');
+      code.className = 'rc-code';
+      code.textContent = 'HTTP ' + r.code;
+      head.appendChild(code);
+    }
+
+    var copyBtn = document.createElement('button');
+    copyBtn.className = 'rc-copy';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', function(){
+      copyText(resultToText(r)).then(function(){
+        copyBtn.textContent = 'Copied!';
+        copyBtn.classList.add('done');
+        setTimeout(function(){
+          copyBtn.textContent = 'Copy';
+          copyBtn.classList.remove('done');
+        }, 1600);
+      }).catch(function(){ toast('Copy failed'); });
+    });
+    head.appendChild(copyBtn);
+
+    card.appendChild(head);
+
+    var body = document.createElement('div');
+    body.className = 'rc-body';
+
+    var lineUrl = document.createElement('div');
+    lineUrl.className = 'rc-line';
+    lineUrl.textContent = '🔗 Firebase URL';
+
+    var urlCode = document.createElement('code');
+    urlCode.className = 'rc-url';
+    urlCode.textContent = r.url;
+
+    body.appendChild(lineUrl);
+    body.appendChild(urlCode);
+
+    if(r.working){
+      var lineSummary = document.createElement('div');
+      lineSummary.className = 'rc-line';
+      lineSummary.style.marginTop = '16px';
+      lineSummary.textContent = '📊 Device Summary';
+
+      var summary = document.createElement('div');
+      summary.className = 'rc-summary';
+
+      [
+        { cls:'',    label:'• Total:',   val:r.total },
+        { cls:'on',  label:'• 🟢 Online:',  val:r.online },
+        { cls:'off', label:'• ⚫ Offline:', val:r.offline }
+      ].forEach(function(item){
+        var line = document.createElement('div');
+        line.className = 'line ' + item.cls;
+        line.textContent = item.label + ' ';
+        var b = document.createElement('b');
+        b.textContent = item.val;
+        line.appendChild(b);
+        summary.appendChild(line);
+      });
+
+      body.appendChild(lineSummary);
+      body.appendChild(summary);
+    }
+
+    card.appendChild(body);
+    return card;
+  }
+
+  /* ---------- counters ---------- */
+  function updateStats(checked, working, dead){
+    statChecked.textContent = checked;
+    statWorking.textContent = working;
+    statDead.textContent    = dead;
+  }
+
+  function updateProgress(done, total){
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    progFill.style.width = pct + '%';
+    progPct.textContent = pct + '%';
+    progLabel.textContent = 'Checking ' + done + ' / ' + total;
+  }
+
+  /* ---------- main run ---------- */
+  async function run(){
+    if(running) return;
+
+    // parse + normalise + dedupe
+    var rawLines = urlsEl.value.split(/\r?\n/);
+    var seen = new Set();
+    var list = [];
+    for(var i=0;i<rawLines.length;i++){
+      var u = normaliseUrl(rawLines[i]);
+      if(!u) continue;
+      if(seen.has(u)) continue;
+      seen.add(u);
+      list.push(u);
+    }
+
+    if(list.length === 0){
+      toast('Paste at least one Firebase URL');
+      return;
+    }
+
+    running = true;
+    startBtn.disabled = true;
+    startBtn.textContent = '⏳ Checking…';
+    resultsEl.innerHTML = '';
+    collected = [];
+    copyRow.classList.remove('show');
+    copyAllBtn.classList.remove('done');
+    copyAllBtn.textContent = '📋 Copy All Results';
+
+    statsBar.classList.add('show');
+    progWrap.classList.add('show');
+    updateStats(0, 0, 0);
+    updateProgress(0, list.length);
+
+    var working = 0, dead = 0;
+
+    for(var i=0;i<list.length;i++){
+      // fake latency so it feels like a real scan
+      await sleep(350 + Math.random() * 900);
+
+      var result = simulate(list[i]);
+      collected.push(result);
+
+      if(result.working) working++; else dead++;
+
+      resultsEl.appendChild(buildCard(result));
+
+      updateStats(i + 1, working, dead);
+      updateProgress(i + 1, list.length);
+    }
+
+    running = false;
+    startBtn.disabled = false;
+    startBtn.textContent = '▶ Start Check';
+    progLabel.textContent = 'Finished — ' + working + ' working, ' + dead + ' dead';
+
+    if(collected.length > 0){
+      copyRow.classList.add('show');
+    }
+
+    toast('Check complete');
+  }
+
+  startBtn.addEventListener('click', run);
+
+  sampleBtn.addEventListener('click', function(){
+    urlsEl.value = [
+      'https://ops-tracker-11.firebaseio.com',
+      'https://alpha-desk-771.firebaseio.com',
+      'https://northwind-node.firebasedatabase.app',
+      'https://silent-falcon-09.firebaseio.com',
+      'https://dev-monitor-223.firebaseio.com',
+      'https://gateway-sync-04.firebasedatabase.app'
+    ].join('\n');
+    toast('Sample URLs loaded');
+  });
+
+  clearBtn.addEventListener('click', function(){
+    if(running) return;
+    urlsEl.value = '';
+    resultsEl.innerHTML = '';
+    collected = [];
+    statsBar.classList.remove('show');
+    progWrap.classList.remove('show');
+    copyRow.classList.remove('show');
+    copyAllBtn.classList.remove('done');
+    copyAllBtn.textContent = '📋 Copy All Results';
+    updateStats(0, 0, 0);
+    urlsEl.focus();
+  });
+
+  copyAllBtn.addEventListener('click', function(){
+    if(collected.length === 0) return;
+
+    var chunks = collected.map(function(r, idx){
+      return '#' + (idx + 1) + '\n' + resultToText(r);
+    });
+
+    var text = chunks.join('\n' + '─'.repeat(48) + '\n\n');
+
+    copyText(text).then(function(){
+      copyAllBtn.textContent = '✓ Copied to clipboard';
+      copyAllBtn.classList.add('done');
+      setTimeout(function(){
+        copyAllBtn.textContent = '📋 Copy All Results';
+        copyAllBtn.classList.remove('done');
+      }, 2200);
+    }).catch(function(){
+      toast('Copy failed — select manually');
+    });
+  });
+})();
+</script>
+</body>
+</html>
